@@ -24,11 +24,11 @@ An AI-powered document search assistant that allows you to upload PDF files and 
 ## 📂 Folder Structure
 
 📦 ai-document-journal/
-├── 📁 documents/                  # Folder for uploading PDF files
-├── 📁 storage/                    # Persistent storage (ChromaDB)
-│   └── chroma_db/
-├── 📄 document_journal.py        # Project main indexer class
-├── 📄 app.py                     # Project Streamlit UI
-├── 📄 requirements.txt           # Required Python packages
-├── 📄 README.md                  # Project description for GitHub
+- ├── 📁 documents/                  # Folder for uploading PDF files
+- ├── 📁 storage/                    # Persistent storage (ChromaDB)
+- │   └── chroma_db/
+- ├── 📄 document_journal.py        # Project main indexer class
+- ├── 📄 app.py                     # Project Streamlit UI
+- ├── 📄 requirements.txt           # Required Python packages
+- ├── 📄 README.md                  # Project description for GitHub
 
