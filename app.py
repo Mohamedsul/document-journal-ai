@@ -5,6 +5,14 @@ import time
 import shutil
 from typing import Dict, Any
 import logging
+import os
+
+# Redirect NLTK data to a safe location in Streamlit
+nltk_data_dir = "/tmp/nltk_data"
+os.environ["NLTK_DATA"] = nltk_data_dir
+
+import nltk
+nltk.download("punkt", download_dir=nltk_data_dir)
 
 # Assuming document_journal.py is in the same directory
 try:
