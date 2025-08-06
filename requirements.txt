@@ -1,7 +1,54 @@
-# Core Streamlit App Dependencies
-streamlit
-llama-index==0.10.38
-chromadb==0.4.24
-sentence-transformers==2.1.0
-PyMuPDF==1.22.5
-pandas==2.2.2
+# AI Document Journal - Requirements File
+# Core dependencies for PDF processing, vector search, and web interface
+
+# Web Framework
+streamlit>=1.28.0
+
+# LlamaIndex Core Components
+llama-index>=0.9.0
+llama-index-core>=0.10.0
+llama-index-readers-file>=0.1.0
+llama-index-embeddings-huggingface>=0.1.0
+llama-index-llms-openai>=0.1.0
+llama-index-vector-stores-chroma>=0.1.0
+
+# Vector Database
+chromadb>=0.4.15
+
+# Machine Learning & NLP
+sentence-transformers>=2.2.0
+transformers>=4.30.0
+torch>=2.0.0
+
+# PDF Processing
+PyMuPDF>=1.23.0  # Used by llama-index PDFReader
+pypdf>=3.0.0     # Alternative PDF reader
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Utilities
+pathlib2>=2.3.7
+python-dotenv>=1.0.0
+
+# Optional: OpenAI API (if you want to use GPT models)
+openai>=1.0.0
+
+# Development & Logging
+logging>=0.4.9.6
+
+# System Dependencies (usually pre-installed)
+# uuid - built-in Python module
+# datetime - built-in Python module
+# collections - built-in Python module
+# os - built-in Python module
+# pathlib - built-in Python module (Python 3.4+)
+# typing - built-in Python module (Python 3.5+)
+
+# Notes:
+# - This app uses local HuggingFace embeddings by default (no API key required)
+# - OpenAI integration is optional and requires an API key
+# - ChromaDB provides persistent vector storage
+# - Streamlit creates the web interface
+# - The app automatically downloads required ML models on first run
