@@ -1,6 +1,6 @@
 # AI Document Journal - Requirements File
 # Core dependencies for PDF processing, vector search, and web interface
-# Compatible with Python 3.9-3.12 (ChromaDB compatibility issue with 3.13)
+# Compatible with python_version == 3.10 (ChromaDB compatibility issue with 3.13)
 
 # Web Framework
 streamlit>=1.28.0,<2.0.0
