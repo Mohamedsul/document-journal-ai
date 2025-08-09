@@ -27,21 +27,27 @@ from datetime import datetime
 from collections import defaultdict
 
 # LlamaIndex Core Imports
-from llama_index.core import (
-    VectorStoreIndex,
-    Document,
-    Settings,
-    StorageContext,
-)
-from llama_index.core.node_parser import SentenceSplitter
-from llama_index.readers.file import PDFReader
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.llms.openai import OpenAI
-
-# ChromaDB Integration
-from llama_index.vector_stores.chroma import ChromaVectorStore
-import chromadb
-from chromadb.config import Settings as ChromaSettings
+try:
+    from llama_index.core import (
+        VectorStoreIndex,
+        Document,
+        Settings,
+        StorageContext,
+    )
+    from llama_index.core.node_parser import SentenceSplitter
+    from llama_index.readers.file import PDFReader
+    from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+    from llama_index.llms.openai import OpenAI
+    
+    # ChromaDB Integration - with error handling
+    from llama_index.vector_stores.chroma import ChromaVectorStore
+    import chromadb
+    from chromadb.config import Settings as ChromaSettings
+    
+    LLAMAINDEX_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"LlamaIndex imports failed: {e}")
+    LLAMAINDEX_AVAILABLE = False
 
 # Logging Configuration
 logging.basicConfig(level=logging.INFO)
@@ -72,6 +78,9 @@ class DocumentJournalIndexer:
             openai_api_key: OpenAI API key for LLM (optional, for query answering)
             custom_document_types: Custom mapping of keywords to document types
         """
+        if not LLAMAINDEX_AVAILABLE:
+            raise RuntimeError("LlamaIndex dependencies are not available. Please install required packages.")
+            
         self.documents_dir = Path(documents_dir)
         self.chroma_db_dir = Path(chroma_db_dir)
         self.collection_name = collection_name
@@ -93,8 +102,6 @@ class DocumentJournalIndexer:
         
         # Initialize index as None
         self.index = None
-
-        
     
     def _setup_chromadb(self):
         """Initialize ChromaDB client and collection."""
@@ -135,7 +142,6 @@ class DocumentJournalIndexer:
                     model="gpt-3.5-turbo",
                     temperature=0.1
                 )
-                # Note: OpenAI embeddings are automatically used when OpenAI LLM is set
                 logger.info("Using OpenAI embeddings and LLM")
             else:
                 # Disable the global LLM to prevent fallback errors
@@ -518,7 +524,7 @@ class DocumentJournalIndexer:
             top_k: Number of relevant documents to retrieve
             
         Returns:
-            Dictionary containing clean, professional results
+            Dictionary containing clean, professional results with sources
         """
         if self.index is None:
             raise ValueError("Index not loaded. Call build_or_load_index() first.")
@@ -535,6 +541,7 @@ class DocumentJournalIndexer:
             
             # Group results by document filename
             document_groups = defaultdict(list)
+            sources = []
             
             if hasattr(response, 'source_nodes') and response.source_nodes:
                 for node in response.source_nodes:
@@ -542,11 +549,20 @@ class DocumentJournalIndexer:
                     filename = metadata.get('filename', 'Unknown Document')
                     doc_type = metadata.get('document_type', '')
                     text = getattr(node.node, 'text', '')
+                    score = getattr(node, 'score', 0.0)
                     
                     if text.strip():  # Only include non-empty text
                         document_groups[filename].append({
                             'text': text,
-                            'doc_type': doc_type
+                            'doc_type': doc_type,
+                            'score': score
+                        })
+                        
+                        # Also create sources list for compatibility
+                        sources.append({
+                            'summary': self._clean_text(text, max_length=200),
+                            'metadata': metadata,
+                            'score': score
                         })
             
             # Create clean document summaries
@@ -556,6 +572,7 @@ class DocumentJournalIndexer:
                     # Extract text chunks
                     text_chunks = [chunk['text'] for chunk in chunks]
                     doc_type = chunks[0]['doc_type']  # Get document type from first chunk
+                    avg_score = sum(chunk['score'] for chunk in chunks) / len(chunks)
                     
                     # Combine and clean the text
                     combined_text = self._clean_and_combine_text(text_chunks)
@@ -563,14 +580,17 @@ class DocumentJournalIndexer:
                     document_summaries.append({
                         'filename': self._format_filename(filename),
                         'doc_type': doc_type,
-                        'summary': combined_text
+                        'summary': combined_text,
+                        'score': avg_score
                     })
             
             # Create the result
             result = {
                 "has_results": len(document_summaries) > 0,
                 "total_documents": len(document_summaries),
-                "documents": document_summaries
+                "documents": document_summaries,
+                "answer": str(response) if response else "No answer generated",
+                "sources": sources  # Add sources for app compatibility
             }
             
             return result
@@ -581,6 +601,8 @@ class DocumentJournalIndexer:
                 "has_results": False,
                 "total_documents": 0,
                 "documents": [],
+                "answer": "Unable to search documents. Please try again.",
+                "sources": [],
                 "error": "Unable to search documents. Please try again."
             }
     
@@ -723,16 +745,13 @@ if __name__ == "__main__":
         print(f"Documents: {collection_info.get('document_count', 0)}")
         print(f"Storage Path: {collection_info.get('chroma_db_path', 'N/A')}")
         
-        # Example Query with  formatting
-        print(f"\n🔍 Testing  Query Results:")
+        # Example Query with formatting
+        print(f"\n🔍 Testing Query Results:")
         result = doc_journal.query("What information is available in the documents?", top_k=5)
         
-        # Display  formatted results
+        # Display formatted results
         formatted_output = doc_journal.format_results_for_display(result, "What information is available in the documents?")
         print("\n" + "="*60)
-        print(" OUTPUT Results :")
+        print("OUTPUT Results:")
         print("="*60)
         print(formatted_output)
-       
-        
-        

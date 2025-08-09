@@ -1,59 +1,33 @@
-# AI Document Journal - Requirements File
-# Core dependencies for PDF processing, vector search, and web interface
-# Compatible with python_version == 3.10 (ChromaDB compatibility issue with 3.13)
+# Core dependencies for AI Document Journal
+# Recommended Python version: 3.11
 
-# Web Framework
-streamlit>=1.28.0,<2.0.0
+# Streamlit for web interface
+streamlit>=1.28.0
 
-# LlamaIndex Core Components
-llama-index>=0.10.0,<0.11.0
-llama-index-core>=0.10.0,<0.11.0
-llama-index-readers-file>=0.1.0,<0.2.0
-llama-index-embeddings-huggingface>=0.1.0,<0.3.0
-llama-index-llms-openai>=0.1.0,<0.3.0
-llama-index-vector-stores-chroma>=0.1.0,<0.3.0
+# LlamaIndex core components
+llama-index>=0.9.0
+llama-index-core>=0.10.0
+llama-index-embeddings-huggingface>=0.1.0
+llama-index-vector-stores-chroma>=0.1.0
+llama-index-readers-file>=0.1.0
+llama-index-llms-openai>=0.1.0
 
-# Vector Database - Pin to compatible version for stability
-chromadb==0.4.22
+# ChromaDB for vector storage
+chromadb>=0.4.15,<0.5.0
 
-# Machine Learning & NLP - Pin versions for compatibility
-sentence-transformers>=2.2.0,<3.0.0
-transformers>=4.30.0,<5.0.0
-torch>=2.0.0,<3.0.0
-huggingface-hub>=0.16.0,<1.0.0
+# HuggingFace transformers and sentence transformers
+sentence-transformers>=2.2.0
+transformers>=4.21.0
+torch>=1.12.0
 
-# PDF Processing
-PyMuPDF>=1.23.0,<2.0.0  # Used by llama-index PDFReader
-pypdf>=3.0.0,<4.0.0     # Alternative PDF reader
+# PDF processing
+PyPDF2>=3.0.0
+pdfplumber>=0.7.0
 
-# Data Processing
-pandas>=1.5.0,<3.0.0
-numpy>=1.21.0,<2.0.0
+# Additional utilities
+numpy>=1.21.0
+pandas>=1.3.0
+pathlib2>=2.3.7
 
-# HTTP and Networking (required by some dependencies)
-requests>=2.28.0,<3.0.0
-urllib3>=1.26.0,<3.0.0
-
-# Utilities
-python-dotenv>=1.0.0,<2.0.0
-
-# Optional: OpenAI API (if you want to use GPT models)
-openai>=1.0.0,<2.0.0
-
-# System compatibility
-setuptools>=65.0.0  # Required for some packages
-
-# System Dependencies (usually pre-installed)
-# uuid - built-in Python module
-# datetime - built-in Python module
-# collections - built-in Python module
-# os - built-in Python module
-# pathlib - built-in Python module (Python 3.4+)
-# typing - built-in Python module (Python 3.5+)
-
-# Notes:
-# - This app uses local HuggingFace embeddings by default (no API key required)
-# - OpenAI integration is optional and requires an API key
-# - ChromaDB provides persistent vector storage
-# - Streamlit creates the web interface
-# - The app automatically downloads required ML models on first run
+# Optional: OpenAI for enhanced LLM capabilities
+# openai>=1.0.0

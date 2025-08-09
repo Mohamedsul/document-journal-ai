@@ -7,22 +7,27 @@ from typing import Dict, Any
 import logging
 import os
 
-# Redirect NLTK data to a safe location in Streamlit
-nltk_data_dir = "/tmp/nltk_data"
-os.environ["NLTK_DATA"] = nltk_data_dir
-
-import nltk
-nltk.download("punkt", download_dir=nltk_data_dir)
-
-# Assuming document_journal.py is in the same directory
-try:
-    from document_journal import DocumentJournalIndexer
-except ImportError:
-    st.error("❌ Could not import DocumentJournalIndexer. Please ensure document_journal.py is in the same directory.")
-    st.stop()
-
 # Configure logging to suppress verbose output
 logging.basicConfig(level=logging.WARNING)
+
+# Check Python version
+python_version = sys.version_info
+if python_version >= (3, 12):
+    st.warning(f"⚠️ Python {python_version.major}.{python_version.minor} detected. This app works best with Python 3.11. Some dependencies may have compatibility issues.")
+
+# Try to import the document journal with better error handling
+try:
+    from document_journal import DocumentJournalIndexer, LLAMAINDEX_AVAILABLE
+    if not LLAMAINDEX_AVAILABLE:
+        st.error("❌ **LlamaIndex dependencies are not available.**\n\nPlease install the required packages with:\n```bash\npip install llama-index llama-index-vector-stores-chroma llama-index-embeddings-huggingface llama-index-readers-file chromadb sentence-transformers\n```")
+        st.stop()
+except ImportError as e:
+    st.error(f"❌ **Import Error:** {str(e)}\n\nPlease ensure all required dependencies are installed:\n```bash\npip install llama-index llama-index-vector-stores-chroma llama-index-embeddings-huggingface llama-index-readers-file chromadb sentence-transformers streamlit\n```")
+    st.stop()
+except Exception as e:
+    st.error(f"❌ **Initialization Error:** {str(e)}\n\nThere was an issue initializing the document indexer. This might be due to:\n- Python version compatibility (recommend Python 3.11)\n- Missing system dependencies\n- ChromaDB compatibility issues")
+    st.info("💡 **Troubleshooting:**\n1. Try downgrading to Python 3.11\n2. Reinstall dependencies in a fresh virtual environment\n3. Check system requirements for ChromaDB")
+    st.stop()
 
 # Page configuration
 st.set_page_config(
@@ -287,7 +292,6 @@ def display_source_snippet(source: Dict[str, Any], index: int):
         # Content preview
         st.markdown("**Content Preview:**")
         st.markdown(f"*{source.get('summary', 'No content available.')}*")
-
         
         # Metadata
         metadata = source.get('metadata', {})
@@ -312,8 +316,15 @@ def main():
     st.markdown('<p class="subtitle">Your intelligent document search and analysis assistant</p>', unsafe_allow_html=True)
     st.markdown("---")
     
+    # System info
+    python_version = sys.version_info
+    if python_version >= (3, 12):
+        st.info(f"ℹ️ Running on Python {python_version.major}.{python_version.minor}. For best compatibility, consider using Python 3.11.")
+    
     # Initialize the indexer
-    indexer = initialize_indexer()
+    with st.spinner("🔧 Initializing AI Document Journal..."):
+        indexer = initialize_indexer()
+    
     if indexer is None:
         st.stop()
     
@@ -388,7 +399,6 @@ def main():
         st.markdown("---")
         
         # Document statistics
-        stats = indexer.get_document_stats()
         display_document_stats(stats)
     
     # Main content area
@@ -430,33 +440,30 @@ def main():
             help="Ask any question about your document collection"
         )
         
-        # Enhanced Search Options - Always visible with better UX
+        # Enhanced Search Options
         st.markdown("### ⚙️ Search Options")
         
-        # Create a styled container for search options
         with st.container():
             col1, col2 = st.columns([2, 1])
             
             with col1:
-                # Use slider for better UX - default to 1
                 num_results = st.slider(
                     "🔢 Number of sources to show:",
                     min_value=1,
                     max_value=10,
-                    value=1,  # Default to 1 result
+                    value=3,  # Default to 3 results
                     step=1,
-                    help="Select how many relevant document sources to display. Start with 1 for focused results."
+                    help="Select how many relevant document sources to display."
                 )
             
             with col2:
-                # Metadata toggle
                 show_metadata = st.checkbox(
                     "📋 Show detailed metadata",
                     value=True,
                     help="Include file information and relevance scores"
                 )
             
-            # Display current configuration with helpful hints
+            # Display current configuration
             if num_results == 1:
                 st.markdown('<div class="option-hint">💡 Showing the most relevant source for focused results</div>', 
                           unsafe_allow_html=True)
@@ -474,16 +481,17 @@ def main():
                         # Execute the query with dynamic top_k
                         result = loaded_indexer.query(
                             query_text=query,
-                            top_k=num_results,  # Use the slider value dynamically
-                            
+                            top_k=num_results
                         )
                         
                         # Display the answer
                         st.markdown("## 💡 Answer")
+                        answer_text = result.get('answer', 'No answer generated')
+                        
                         st.markdown(f"""
                         <div class="answer-box">
                             <h3>📋 Response</h3>
-                            <p>{result['answer']}</p>
+                            <p>{answer_text}</p>
                         </div>
                         """, unsafe_allow_html=True)
                         
@@ -498,7 +506,16 @@ def main():
                                 st.write(f"Found {source_count} relevant sources:")
                             
                             for i, source in enumerate(result['sources']):
-                                display_source_snippet(source, i)
+                                if show_metadata:
+                                    display_source_snippet(source, i)
+                                else:
+                                    # Simple display without metadata
+                                    filename = source.get('metadata', {}).get('filename', 'Unknown')
+                                    summary = source.get('summary', 'No content available')
+                                    st.markdown(f"**📄 {filename}**")
+                                    st.write(summary)
+                                    if i < len(result['sources']) - 1:
+                                        st.markdown("---")
                         else:
                             st.info("ℹ️ No specific source documents were identified for this answer.")
                         
@@ -516,6 +533,7 @@ def main():
                     except Exception as e:
                         st.error(f"❌ Error during search: {str(e)}")
                         st.write("Please try rephrasing your question or check if the knowledge base is properly loaded.")
+                        st.info("💡 **Troubleshooting:**\n- Try rebuilding the index\n- Check if documents are properly uploaded\n- Ensure Python version compatibility")
             else:
                 st.warning("⚠️ Please enter a question to search.")
         
@@ -546,7 +564,8 @@ def main():
         2. **Build Index**: Click "Rebuild Index" after uploading
         3. **Start Searching**: Ask questions about your documents
         
-        **Requirements:**
+        **System Requirements:**
+        - Python 3.11 (recommended) or 3.10+
         - PDF documents in the `documents/` directory
         - ChromaDB storage for vector indexing
         - HuggingFace embeddings (local, no API key needed)
@@ -564,9 +583,9 @@ def main():
 
     # Footer
     st.markdown("---")
-    st.markdown("""
+    st.markdown(f"""
     <div style="text-align: center; color: #6c757d; font-size: 0.9rem;">
-        <p>🤖 Powered by LlamaIndex, ChromaDB & HuggingFace | AI Document Journal</p>
+        <p>🤖 Powered by LlamaIndex, ChromaDB & HuggingFace | Python {python_version.major}.{python_version.minor}</p>
         <p>💡 Upload PDFs • 🔍 Ask Questions • 📊 Get Insights</p>
     </div>
     """, unsafe_allow_html=True)
